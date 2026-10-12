@@ -18,9 +18,9 @@ ENV NODE_ENV=production \
     PORT=3000 \
     HOSTNAME=0.0.0.0
 
-# Ghostscript does the PDF compression; fonts keep text rendering sane for odd PDFs.
+# Ghostscript compresses PDFs; qpdf encrypts/decrypts them; fonts keep text rendering sane.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ghostscript fonts-dejavu-core \
+    && apt-get install -y --no-install-recommends ghostscript qpdf fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 
 # Run as an unprivileged user.
