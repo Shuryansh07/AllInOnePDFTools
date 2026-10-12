@@ -1,6 +1,10 @@
 services:
   web:
-    build: .
+    build:
+      context: .
+      args:
+        # Set to your public URL for correct canonical links, sitemap and social previews.
+        SITE_URL: ${SITE_URL:-http://localhost:3000}
     ports:
       - "3000:3000"
     environment:

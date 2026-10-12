@@ -8,7 +8,9 @@ FROM node:22-bookworm-slim AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-ENV NEXT_TELEMETRY_DISABLED=1
+# Public origin for canonical URLs, sitemap and Open Graph (baked in at build time).
+ARG SITE_URL=http://localhost:3000
+ENV SITE_URL=$SITE_URL NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
 FROM node:22-bookworm-slim AS runner

@@ -1,20 +1,7 @@
-import type { Metadata } from "next";
-import { getTool } from "@/config/tools";
-import { CompressPdfWorkspace } from "@/features/compress-pdf/compress-pdf-workspace";
+import { ToolRoute, toolRouteMetadata } from "@/components/tools/tool-route";
 
-const tool = getTool("compress-pdf")!;
+export const metadata = toolRouteMetadata("compress-pdf");
 
-export const metadata: Metadata = {
-  title: tool.name,
-  description: tool.description,
-};
-
-export default function CompressPdfPage() {
-  return (
-    <div className="mx-auto max-w-3xl px-4 py-10">
-      <h1 className="text-3xl font-bold tracking-tight">{tool.name}</h1>
-      <p className="mt-2 mb-8 text-muted-foreground">{tool.description}</p>
-      <CompressPdfWorkspace />
-    </div>
-  );
+export default function Page() {
+  return <ToolRoute slug="compress-pdf" />;
 }
