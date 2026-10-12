@@ -1,0 +1,11 @@
+services:
+  web:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+    # Compression runs Ghostscript on user files; cap what a runaway job can use.
+    mem_limit: 1g
+    cpus: 2
+    restart: unless-stopped
