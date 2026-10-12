@@ -5,6 +5,8 @@ services:
       args:
         # Set to your public URL for correct canonical links, sitemap and social previews.
         SITE_URL: ${SITE_URL:-http://localhost:3000}
+        # Optional: shown on the privacy page.
+        CONTACT_EMAIL: ${CONTACT_EMAIL:-}
     ports:
       - "3000:3000"
     environment:

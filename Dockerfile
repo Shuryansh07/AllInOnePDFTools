@@ -10,7 +10,8 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # Public origin for canonical URLs, sitemap and Open Graph (baked in at build time).
 ARG SITE_URL=http://localhost:3000
-ENV SITE_URL=$SITE_URL NEXT_TELEMETRY_DISABLED=1
+ARG CONTACT_EMAIL=
+ENV SITE_URL=$SITE_URL CONTACT_EMAIL=$CONTACT_EMAIL NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
 FROM node:22-bookworm-slim AS runner
@@ -33,4 +34,9 @@ COPY --from=builder --chown=app:app /app/public ./public
 USER app
 
 EXPOSE 3000
+
+# Healthy only when the app is up AND Ghostscript and qpdf can run.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+
 CMD ["node", "server.js"]

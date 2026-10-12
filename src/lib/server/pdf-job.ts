@@ -1,6 +1,7 @@
 import { LIMITS } from "@/config/limits";
 import { AppError, ERROR_CODES, isAppError, type ErrorCode } from "@/lib/errors/app-error";
-import { ConcurrencyGate, RateLimiter } from "./limiter";
+import { clientIp } from "./client-ip";
+import { ConcurrencyGate, positiveInt, RateLimiter } from "./limiter";
 
 /**
  * Shared by every server-side PDF endpoint, so one budget covers them all.
@@ -8,10 +9,16 @@ import { ConcurrencyGate, RateLimiter } from "./limiter";
  */
 const shared = globalThis as typeof globalThis & {
   __pdfJobLimiter?: RateLimiter;
+  __pdfJobUnknownLimiter?: RateLimiter;
   __pdfJobGate?: ConcurrencyGate;
+  __pdfJobWarnedNoIp?: boolean;
 };
 const limiter = (shared.__pdfJobLimiter ??= new RateLimiter(10, 60_000));
-const gate = (shared.__pdfJobGate ??= new ConcurrencyGate(2));
+// Used only when no client IP can be determined (misconfigured proxy header). Everyone shares
+// this bucket, so it's deliberately generous: better to under-limit than to throttle the whole site.
+const unknownLimiter = (shared.__pdfJobUnknownLimiter ??= new RateLimiter(120, 60_000));
+// Lower this on small instances, where several large files at once can exhaust memory.
+const gate = (shared.__pdfJobGate ??= new ConcurrencyGate(positiveInt(process.env.PDF_MAX_CONCURRENT_JOBS, 2)));
 
 const STATUS_BY_CODE: Partial<Record<ErrorCode, number>> = {
   INVALID_FILE_TYPE: 415,
@@ -42,10 +49,6 @@ export function errorResponse(error: unknown, label: string): Response {
   );
 }
 
-function clientKey(request: Request): string {
-  return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
-}
-
 export interface PdfJobContext {
   bytes: Buffer;
   filename: string;
@@ -61,7 +64,21 @@ export async function handlePdfJob(
   label: string,
   handler: (context: PdfJobContext) => Promise<Response>,
 ): Promise<Response> {
-  if (!limiter.allow(clientKey(request))) {
+  const ip = clientIp(request.headers);
+  if (ip === "unknown" && !shared.__pdfJobWarnedNoIp) {
+    shared.__pdfJobWarnedNoIp = true;
+    // Header NAMES only (never values) so this is safe to log and shows what the proxy provides.
+    const present = ["x-forwarded-for", "x-real-ip", "cf-connecting-ip", "true-client-ip"].filter((name) =>
+      request.headers.has(name),
+    );
+    console.warn(
+      `[rate-limit] No client IP found using header "${process.env.TRUSTED_PROXY_HEADER ?? "x-forwarded-for"}". ` +
+        `Candidate headers present: ${present.length ? present.join(", ") : "none"}. ` +
+        "Set TRUSTED_PROXY_HEADER to the one your proxy controls.",
+    );
+  }
+  const allowed = ip === "unknown" ? unknownLimiter.allow("unknown") : limiter.allow(ip);
+  if (!allowed) {
     return errorResponse(new AppError(ERROR_CODES.RATE_LIMITED), label);
   }
 

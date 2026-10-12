@@ -1,0 +1,28 @@
+# Render Blueprint: https://render.com/docs/blueprint-spec
+# Create it with: Dashboard > New > Blueprint > pick this repo.
+services:
+  - type: web
+    name: pdf-parser
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    # "free" is fine for trying it out: it sleeps after 15 min idle and has small memory.
+    # For real traffic move to a paid plan with more RAM (Ghostscript is memory hungry).
+    plan: free
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      # Build-time values: Render passes env vars to the Docker build as build args, and the
+      # Dockerfile declares them with ARG. Changing either needs a redeploy (a rebuild).
+      - key: SITE_URL
+        sync: false # you'll be prompted; use your public URL, e.g. https://pdf.example.com
+      - key: CONTACT_EMAIL
+        sync: false # optional; shown on the privacy page
+
+      # How the app finds the real client IP for rate limiting. Render does not document this,
+      # so verify after the first deploy (see the logs for a "[rate-limit]" warning).
+      - key: TRUSTED_PROXY_HEADER
+        value: cf-connecting-ip
+
+      # Keep jobs sequential on small instances so large PDFs can't exhaust memory.
+      - key: PDF_MAX_CONCURRENT_JOBS
+        value: "1"

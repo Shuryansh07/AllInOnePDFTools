@@ -7,7 +7,7 @@ import {
   isCompressionPreset,
   type GhostscriptRunner,
 } from "./ghostscript";
-import { ConcurrencyGate, RateLimiter } from "./limiter";
+import { ConcurrencyGate, positiveInt, RateLimiter } from "./limiter";
 
 /** A fake gs that writes `size` bytes to the -sOutputFile path. */
 function fakeRunner(size: number): GhostscriptRunner {
@@ -80,6 +80,15 @@ describe("RateLimiter", () => {
     expect(limiter.allow("a", 200)).toBe(false);
     expect(limiter.allow("b", 200)).toBe(true);
     expect(limiter.allow("a", 1500)).toBe(true);
+  });
+});
+
+describe("positiveInt", () => {
+  it("parses positive integers and falls back otherwise", () => {
+    expect(positiveInt("3", 2)).toBe(3);
+    for (const bad of [undefined, "", "0", "-1", "abc", "1.5"]) {
+      expect(positiveInt(bad, 2)).toBe(2);
+    }
   });
 });
 

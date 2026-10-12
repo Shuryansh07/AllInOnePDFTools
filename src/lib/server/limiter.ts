@@ -3,6 +3,12 @@
  * State is per server instance; behind multiple instances, move this to a shared store (e.g. Redis).
  */
 
+/** Parse a positive integer from config (e.g. an env var), falling back when missing or invalid. */
+export function positiveInt(value: string | undefined, fallback: number): number {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= 1 ? parsed : fallback;
+}
+
 export class RateLimiter {
   private hits = new Map<string, number[]>();
 

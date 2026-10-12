@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
+      # `next build` also type-checks the project.
+      - name: Build
+        run: npm run build
+        env:
+          SITE_URL: https://example.com
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: verify
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t pdf-parser:ci .
+
+      # Proves the image actually contains working Ghostscript and qpdf.
+      - name: Smoke test
+        run: |
+          docker run -d --name app -p 3000:3000 pdf-parser:ci
+          for i in $(seq 1 30); do curl -sf http://localhost:3000/api/health && exit 0; sleep 2; done
+          docker logs app
+          exit 1
