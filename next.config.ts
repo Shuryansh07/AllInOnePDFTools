@@ -21,6 +21,14 @@ const nextConfig: NextConfig = {
     ];
   },
   turbopack: {
+    // MuPDF's loader references Node built-ins behind runtime checks. Give the browser build
+    // an empty stand-in so they resolve (they are never executed there).
+    resolveAlias: {
+      module: { browser: "./src/lib/mupdf/empty-module.ts" },
+      "node:module": { browser: "./src/lib/mupdf/empty-module.ts" },
+      "node:fs": { browser: "./src/lib/mupdf/empty-module.ts" },
+      fs: { browser: "./src/lib/mupdf/empty-module.ts" },
+    },
     rules: {
       "*.css": {
         loaders: ["@tailwindcss/turbopack"],

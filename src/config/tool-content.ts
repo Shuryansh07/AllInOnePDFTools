@@ -183,6 +183,50 @@ export const toolContent: Record<string, ToolContent> = {
     ],
   },
 
+  "edit-pdf": {
+    processing: "browser",
+    metaTitle: "Edit PDF online: change text, add images & shapes",
+    metaDescription:
+      "Change existing text in a PDF, or add new text, images, highlights and shapes. Free, and runs privately in your browser.",
+    steps: [
+      "Select the PDF you want to edit.",
+      "Click existing text to change it, or add new text, an image or a shape and drag it into place.",
+      "Click Save PDF and download the edited file.",
+    ],
+    faqs: [
+      {
+        question: "Can I change the text that's already in my PDF?",
+        answer:
+          "Yes. Click a line of text and type the new wording. The original text is removed from the file and the new text is written in its place, so it can't be selected or extracted from the saved copy.",
+      },
+      {
+        question: "Will changed text keep the original font?",
+        answer:
+          "No. Replacement text uses Helvetica, because the original font is usually embedded as a partial subset that can't draw arbitrary new letters. Size and colour are matched to the original.",
+      },
+      {
+        question: "Why can't I click any text on my page?",
+        answer:
+          "Scanned documents and images of text have no real text to edit. You can still add new text, images and shapes on top of them.",
+      },
+      {
+        question: "Does covering text with a white box remove it?",
+        answer:
+          "No. A shape only hides content visually; the text underneath is still in the file. To really remove text, click it and use Remove line, which deletes it from the page.",
+      },
+      {
+        question: "Can I add my signature?",
+        answer:
+          "Yes. Add an image of your signature (a PNG with a transparent background works best), then drag and resize it into place.",
+      },
+      {
+        question: "Is my file uploaded?",
+        answer:
+          "No. Editing happens entirely in your browser. The first use downloads the editor engine, about 4 MB, and your file never leaves your device.",
+      },
+    ],
+  },
+
   "image-to-pdf": {
     processing: "browser",
     metaTitle: "Convert JPG and PNG images to PDF, free",

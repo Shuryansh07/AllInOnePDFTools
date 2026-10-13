@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import { CompressPdfWorkspace } from "@/features/compress-pdf/compress-pdf-workspace";
 import { DeletePagesWorkspace } from "@/features/delete-pages/delete-pages-workspace";
+import { EditPdfWorkspace } from "@/features/edit-pdf/edit-pdf-workspace";
 import { ImageToPdfWorkspace } from "@/features/image-to-pdf/image-to-pdf-workspace";
 import { MergePdfWorkspace } from "@/features/merge-pdf/merge-pdf-workspace";
 import { ProtectPdfWorkspace } from "@/features/protect-pdf/protect-pdf-workspace";
@@ -16,6 +17,7 @@ export const workspaces: Record<string, ComponentType> = {
   "rotate-pdf": RotatePdfWorkspace,
   "delete-pages": DeletePagesWorkspace,
   "reorder-pages": ReorderPagesWorkspace,
+  "edit-pdf": EditPdfWorkspace,
   "image-to-pdf": ImageToPdfWorkspace,
   "compress-pdf": CompressPdfWorkspace,
   "protect-pdf": ProtectPdfWorkspace,

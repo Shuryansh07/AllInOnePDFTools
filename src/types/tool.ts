@@ -2,7 +2,7 @@ import type { LucideIcon } from "lucide-react";
 
 export type ToolStatus = "available" | "coming-soon";
 
-export type ToolCategoryId = "organize" | "convert" | "optimize" | "secure";
+export type ToolCategoryId = "organize" | "edit" | "convert" | "optimize" | "secure";
 
 export interface ToolCategory {
   id: ToolCategoryId;

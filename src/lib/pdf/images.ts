@@ -24,7 +24,7 @@ const PX_TO_PT = 0.75;
  * pdf-lib ignores EXIF, so phone photos would otherwise come out sideways.
  * Browser-only.
  */
-async function normalizeJpeg(file: File): Promise<Uint8Array> {
+export async function normalizeJpeg(file: File): Promise<Uint8Array> {
   const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
   try {
     const canvas = document.createElement("canvas");

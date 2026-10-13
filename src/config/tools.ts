@@ -1,6 +1,7 @@
 import {
   FileImage,
   FileMinus2,
+  FilePenLine,
   ListOrdered,
   Lock,
   LockOpen,
@@ -13,6 +14,7 @@ import type { ToolCategory, ToolDefinition } from "@/types/tool";
 
 export const categories: ToolCategory[] = [
   { id: "organize", label: "Organize", description: "Merge, split and arrange pages" },
+  { id: "edit", label: "Edit", description: "Change text, add images and shapes" },
   { id: "convert", label: "Convert", description: "Turn other files into PDF" },
   { id: "optimize", label: "Optimize", description: "Make PDFs smaller" },
   { id: "secure", label: "Secure", description: "Add or remove passwords" },
@@ -61,6 +63,14 @@ export const tools: ToolDefinition[] = [
     description: "Drag pages into the order you want.",
     icon: ListOrdered,
     category: "organize",
+    status: "available",
+  },
+  {
+    slug: "edit-pdf",
+    name: "Edit PDF",
+    description: "Change existing text and add text, images and shapes.",
+    icon: FilePenLine,
+    category: "edit",
     status: "available",
   },
   {
