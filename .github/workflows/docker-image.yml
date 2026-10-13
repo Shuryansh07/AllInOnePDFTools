@@ -1,42 +1,107 @@
-# syntax=docker/dockerfile:1
-FROM node:22-bookworm-slim AS deps
-WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci
+name: Docker image
 
-FROM node:22-bookworm-slim AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
-# Public origin for canonical URLs, sitemap and Open Graph (baked in at build time).
-ARG SITE_URL=http://localhost:3000
-ARG CONTACT_EMAIL=
-ENV SITE_URL=$SITE_URL CONTACT_EMAIL=$CONTACT_EMAIL NEXT_TELEMETRY_DISABLED=1
-RUN npm run build
+# Builds the production image, proves it works, and stores it as a downloadable
+# workflow artifact. Download it from the run's "Artifacts" section, then:
+#   gunzip pdf-parser-<sha>.tar.gz && docker load -i pdf-parser-<sha>.tar
 
-FROM node:22-bookworm-slim AS runner
-WORKDIR /app
-ENV NODE_ENV=production \
-    NEXT_TELEMETRY_DISABLED=1 \
-    PORT=3000 \
-    HOSTNAME=0.0.0.0
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      site_url:
+        description: Public URL baked into the build (canonical links, sitemap, social previews)
+        required: false
+        type: string
 
-# Ghostscript compresses PDFs; qpdf encrypts/decrypts them; fonts keep text rendering sane.
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends ghostscript qpdf fonts-dejavu-core \
-    && rm -rf /var/lib/apt/lists/*
+permissions:
+  contents: read
 
-# Run as an unprivileged user.
-RUN useradd --system --uid 1001 --create-home app
-COPY --from=builder --chown=app:app /app/.next/standalone ./
-COPY --from=builder --chown=app:app /app/.next/static ./.next/static
-COPY --from=builder --chown=app:app /app/public ./public
-USER app
+# A newer push to the same ref makes an in-progress build obsolete.
+concurrency:
+  group: docker-image-${{ github.ref }}
+  cancel-in-progress: true
 
-EXPOSE 3000
+env:
+  IMAGE_NAME: pdf-parser
+  # Manual input wins, then the repository variable SITE_URL, then a safe default.
+  SITE_URL: ${{ inputs.site_url || vars.SITE_URL || 'http://localhost:3000' }}
 
-# Healthy only when the app is up AND Ghostscript and qpdf can run.
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
 
-CMD ["node", "server.js"]
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: false
+          tags: ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          build-args: |
+            SITE_URL=${{ env.SITE_URL }}
+          # Write the image to a tar file instead of a registry.
+          outputs: type=docker,dest=${{ runner.temp }}/image.tar
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Don't store an image that doesn't work: the container must report healthy,
+      # which means the app is up AND Ghostscript and qpdf can actually run.
+      - name: Smoke test
+        run: |
+          docker load --input "$RUNNER_TEMP/image.tar"
+          docker run -d --name app -p 3000:3000 "$IMAGE_NAME:$GITHUB_SHA"
+
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3000/api/health; then
+              echo
+              echo "Health check passed."
+              exit 0
+            fi
+            sleep 2
+          done
+
+          echo "Health check failed. Container logs:"
+          docker logs app
+          exit 1
+
+      - name: Compress image
+        run: gzip -c "$RUNNER_TEMP/image.tar" > "$RUNNER_TEMP/$IMAGE_NAME-$GITHUB_SHA.tar.gz"
+
+      - name: Upload image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.IMAGE_NAME }}-image-${{ github.sha }}
+          path: ${{ runner.temp }}/${{ env.IMAGE_NAME }}-${{ github.sha }}.tar.gz
+          if-no-files-found: error
+          # The file is already gzipped; compressing again only wastes time.
+          compression-level: 0
+          # Images are large and Actions storage is limited, so keep them briefly.
+          retention-days: 3
+
+      - name: Summary
+        run: |
+          {
+            echo "### Docker image built"
+            echo
+            echo "- Image: \`$IMAGE_NAME:$GITHUB_SHA\`"
+            echo "- \`SITE_URL\` baked in: \`$SITE_URL\`"
+            echo "- Size: $(du -h "$RUNNER_TEMP/$IMAGE_NAME-$GITHUB_SHA.tar.gz" | cut -f1) (gzipped)"
+            echo
+            echo "Download the artifact, then load and run it:"
+            echo
+            echo '```bash'
+            echo "gunzip $IMAGE_NAME-$GITHUB_SHA.tar.gz"
+            echo "docker load -i $IMAGE_NAME-$GITHUB_SHA.tar"
+            echo "docker run -d -p 3000:3000 $IMAGE_NAME:$GITHUB_SHA"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
